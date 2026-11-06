@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RideSplit | Share Rapido Rides & Split Fares</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS for Map View -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif']
+          },
+          colors: {
+            brand: {
+              yellow: '#FDB813',
+              darkYellow: '#E5A50E',
+              dark: '#111827',
+              accent: '#10B981',
+              whatsapp: '#25D366'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-brand-yellow selection:text-black">
+
+  <!-- Top Announcement / Sim Bar -->
+  <aside aria-label="Simulation Bar" class="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 px-4 py-2 text-xs md:text-sm font-semibold flex flex-wrap items-center justify-between shadow-sm">
+    <div class="flex items-center gap-2">
+      <span class="bg-black text-amber-300 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">MVP Demo</span>
+      <span>Simulate User Roles:</span>
+    </div>
+    <div class="flex items-center gap-2 mt-1 sm:mt-0">
+      <button id="simUserA" class="px-2.5 py-1 bg-black/80 hover:bg-black text-white rounded text-xs transition flex items-center gap-1.5 shadow">
+        <i class="fa-solid fa-user-check text-amber-400"></i> User A (Rahul - Poster)
+      </button>
+      <button id="simUserB" class="px-2.5 py-1 bg-white/80 hover:bg-white text-black rounded text-xs transition flex items-center gap-1.5 shadow">
+        <i class="fa-solid fa-magnifying-glass text-emerald-600"></i> User B (Priya - Seeker)
+      </button>
+      <button id="resetDemoDataBtn" title="Reset rides to initial demo data" class="px-2 py-1 bg-black/30 hover:bg-black/50 text-black rounded text-xs transition">
+        <i class="fa-solid fa-rotate-left"></i> Reset Data
+      </button>
+    </div>
+  </aside>
+
+  <!-- Navigation Bar -->
+  <nav class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2.5 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-yellow to-brand-darkYellow flex items-center justify-center text-black font-extrabold text-xl shadow-lg shadow-brand-yellow/20 group-hover:scale-105 transition">
+          <i class="fa-solid fa-motorcycle text-slate-950"></i>
+        </div>
+        <div>
+          <span class="font-display font-bold text-xl tracking-tight text-white flex items-center gap-1">
+            Ride<span class="text-brand-yellow">Split</span>
+          </span>
+          <span class="text-[10px] text-slate-400 block -mt-1 tracking-wider uppercase">Rapido Pool MVP</span>
+        </div>
+      </a>
+
+      <!-- Quick Nav Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="navFindRidesBtn" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium text-slate-200 transition flex items-center gap-2 border border-slate-700">
+          <i class="fa-solid fa-compass text-brand-yellow"></i>
+          <span class="hidden sm:inline">Find Rides</span>
+        </button>
+
+        <button id="navFareCalcBtn" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium text-slate-200 transition flex items-center gap-2 border border-slate-700">
+          <i class="fa-solid fa-calculator text-emerald-400"></i>
+          <span class="hidden sm:inline">Fare Splitter</span>
+        </button>
+
+        <button id="openPostModalBtn" class="px-4 py-2 rounded-lg bg-brand-yellow hover:bg-brand-darkYellow text-slate-950 font-bold text-sm transition shadow-lg shadow-brand-yellow/25 flex items-center gap-2 hover:scale-[1.02]">
+          <i class="fa-solid fa-plus-circle"></i>
+          <span>Post a Ride</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Banner -->
+  <header class="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800/80 py-10 sm:py-14 px-4">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(253,184,19,0.08),transparent_50%)] pointer-events-none"></div>
+    <div class="max-w-5xl mx-auto text-center relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-brand-yellow text-xs font-semibold mb-4">
+        <i class="fa-solid fa-bolt"></i> Book Rapido, Share Seats, Cut Fare by 50%
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold font-display tracking-tight text-white leading-tight">
+        Share Your Commute. <span class="bg-gradient-to-r from-brand-yellow via-amber-300 to-yellow-200 bg-clip-text text-transparent">Halve the Cost.</span>
+      </h1>
+      <p class="mt-3 text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+        Booked a Rapido bike, auto, or cab? Post your extra seat in 10 seconds. Co-passengers find your route and connect instantly via WhatsApp.
+      </p>
+
+      <!-- Quick Action Cards / Workflow Steps -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-8 max-w-3xl mx-auto text-left">
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3.5 backdrop-blur-sm flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-brand-yellow/10 border border-brand-yellow/30 text-brand-yellow flex items-center justify-center font-bold text-sm shrink-0">1</div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-200">User A: Post Ride</h4>
+            <p class="text-[11px] text-slate-400 mt-0.5">Rahul books Rapido & posts destination, time & seats.</p>
+          </div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3.5 backdrop-blur-sm flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">2</div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-200">User B: Search & Match</h4>
+            <p class="text-[11px] text-slate-400 mt-0.5">Priya searches destination keyword & finds matching ride.</p>
+          </div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3.5 backdrop-blur-sm flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-brand-whatsapp/10 border border-brand-whatsapp/30 text-brand-whatsapp flex items-center justify-center font-bold text-sm shrink-0">3</div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-200">Connect & Split</h4>
+            <p class="text-[11px] text-slate-400 mt-0.5">Click "Join" to chat on WhatsApp and settle fare manually.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+    
+    <!-- Search & Filter Controls -->
+    <section class="bg-slate-850 border border-slate-800 rounded-2xl p-4 sm:p-5 mb-8 shadow-xl">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+        <!-- Search Keyword (Destination / Pickup) -->
+        <div class="md:col-span-5 relative">
+          <label for="searchInput" class="block text-[11px] uppercase font-bold text-slate-400 mb-1">
+            <i class="fa-solid fa-location-dot text-rose-400 mr-1"></i> Destination or Pickup Keyword
+          </label>
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"></i>
+            <input type="text" id="searchInput" placeholder="Search by destination (e.g. Koramangala, ITPL, Metro)..."
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow transition">
+          </div>
+        </div>
+
+        <!-- Vehicle Type Filter -->
+        <div class="md:col-span-3">
+          <label for="vehicleFilter" class="block text-[11px] uppercase font-bold text-slate-400 mb-1">
+            <i class="fa-solid fa-taxi text-brand-yellow mr-1"></i> Vehicle Type
+          </label>
+          <select id="vehicleFilter" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow transition">
+            <option value="ALL">All Vehicles (Bike, Auto, Cab)</option>
+            <option value="Bike">Rapido Bike (1 Co-rider)</option>
+            <option value="Auto">Rapido Auto (1-2 Co-riders)</option>
+            <option value="Cab">Rapido Cab / Car (1-3 Co-riders)</option>
+          </select>
+        </div>
+
+        <!-- Sort By -->
+        <div class="md:col-span-2">
+          <label for="sortBy" class="block text-[11px] uppercase font-bold text-slate-400 mb-1">
+            <i class="fa-solid fa-arrow-down-wide-short text-blue-400 mr-1"></i> Sort By
+          </label>
+          <select id="sortBy" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-yellow transition">
+            <option value="timeAsc">Departure Time (Earliest)</option>
+            <option value="fareAsc">Price (Lowest)</option>
+            <option value="seatsDesc">Most Seats Left</option>
+          </select>
+        </div>
+
+        <!-- Quick Reset Filters -->
+        <div class="md:col-span-2 flex items-end">
+          <button id="clearFiltersBtn" class="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center justify-center gap-1.5 h-[42px] mt-auto">
+            <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Tag Chips -->
+      <div class="mt-3.5 pt-3.5 border-t border-slate-800 flex flex-wrap items-center gap-2 text-xs">
+        <span class="text-slate-400 text-xs font-medium">Popular Hotspots:</span>
+        <button class="quick-tag px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-tag="Metro">🚇 Metro Stations</button>
+        <button class="quick-tag px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-tag="Koramangala">📍 Koramangala</button>
+        <button class="quick-tag px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-tag="ITPL">💼 ITPL / Tech Park</button>
+        <button class="quick-tag px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-tag="Indiranagar">🛍️ Indiranagar</button>
+        <button class="quick-tag px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-tag="Cyber City">🏢 Cyber City</button>
+      </div>
+    </section>
+
+    <!-- Two-Column Layout: Rides List & Route Map View -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- Left Column: Available Rides Cards (7 cols) -->
+      <section class="lg:col-span-7 space-y-4">
+        <div class="flex items-center justify-between pb-1">
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-brand-yellow"></i> Available Rides
+            </h2>
+            <span id="ridesCountBadge" class="bg-brand-yellow/15 text-brand-yellow text-xs px-2.5 py-0.5 rounded-full font-bold border border-brand-yellow/30">0 Found</span>
+          </div>
+          <span class="text-xs text-slate-400">Live Updates Enabled</span>
+        </div>
+
+        <!-- Rides Container -->
+        <div id="ridesList" class="space-y-3.5">
+          <!-- Dynamically populated ride cards -->
+        </div>
+
+        <!-- Empty State (hidden by default) -->
+        <div id="emptyState" class="hidden text-center py-12 px-6 bg-slate-850 rounded-2xl border border-dashed border-slate-700">
+          <div class="w-14 h-14 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-slate-500 text-2xl mb-3">
+            <i class="fa-solid fa-map-location-dot"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">No Matching Rides Found</h3>
+          <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            Nobody has posted a ride matching this destination yet. Be the first to post your ride and invite co-passengers!
+          </p>
+          <button id="emptyPostBtn" class="mt-4 px-4 py-2 bg-brand-yellow hover:bg-brand-darkYellow text-slate-950 font-bold rounded-lg text-xs shadow-md transition">
+            <i class="fa-solid fa-plus-circle mr-1"></i> Post This Ride Now
+          </button>
+        </div>
+      </section>
+
+      <!-- Right Column: Live Route Map & Quick Tools (5 cols) -->
+      <section class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+        
+        <!-- Map Card -->
+        <div class="bg-slate-850 border border-slate-800 rounded-2xl p-4 shadow-xl overflow-hidden">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-map"></i>
+              </div>
+              <h3 class="font-bold text-sm text-white">Route Visualization</h3>
+            </div>
+            <span id="selectedRideLabel" class="text-[11px] text-slate-400 truncate max-w-[180px]">Select a ride to view route</span>
+          </div>
+
+          <!-- Leaflet Map Container -->
+          <div id="map" class="w-full h-64 rounded-xl border border-slate-700 bg-slate-900 z-10"></div>
+          
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Pickup
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block ml-2"></span> Drop
+            </span>
+            <button id="openGoogleMapsBtn" class="text-brand-yellow hover:underline flex items-center gap-1" disabled>
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in Google Maps
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Fare Splitter Widget -->
+        <div class="bg-slate-850 border border-slate-800 rounded-2xl p-4 shadow-xl">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-coins"></i>
+              </div>
+              <h3 class="font-bold text-sm text-white">Instant Fare Splitter</h3>
+            </div>
+            <span class="text-[11px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">Calculator</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label for="calcTotalFare" class="block text-slate-400 mb-1">Total Rapido Fare (₹)</label>
+              <input type="number" id="calcTotalFare" value="160" min="10" step="5"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-semibold focus:border-brand-yellow focus:outline-none">
+            </div>
+            <div>
+              <label for="calcRiders" class="block text-slate-400 mb-1">Total Riders (Poster + You)</label>
+              <select id="calcRiders" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white font-semibold focus:border-brand-yellow focus:outline-none">
+                <option value="2" selected>2 Persons (50% each)</option>
+                <option value="3">3 Persons (33% each)</option>
+                <option value="4">4 Persons (25% each)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mt-3.5 p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] text-slate-400">Each Person Pays</div>
+              <div id="calcSplitAmount" class="text-xl font-extrabold text-emerald-400">₹80.00</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[11px] text-slate-400">You Save</div>
+              <div id="calcSavingsAmount" class="text-sm font-bold text-brand-yellow">₹80.00 (50%)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- How It Works Card -->
+        <div class="bg-gradient-to-br from-slate-850 to-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-slate-400 space-y-2">
+          <div class="font-bold text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-brand-yellow"></i> Safe & Simple Pooling
+          </div>
+          <p>
+            This MVP facilitates direct rider-to-rider matching via WhatsApp. No payment gateway cut, no surge surcharge. Meet at the designated pickup point and pay the ride poster via UPI or Cash!
+          </p>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Modal: Post a Ride Form -->
+  <div id="postModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Close Button -->
+      <button id="closePostModalBtn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-brand-yellow flex items-center justify-center text-slate-950 font-extrabold text-lg shadow-md">
+          <i class="fa-solid fa-plus"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white font-display">Post a Ride to Split</h3>
+          <p class="text-xs text-slate-400">Fill your ride details and connect with co-riders</p>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form id="postRideForm" class="space-y-3.5">
+        
+        <!-- Poster Info Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="posterName" class="block text-xs font-semibold text-slate-300 mb-1">
+              Your Name <span class="text-rose-400">*</span>
+            </label>
+            <input type="text" id="posterName" required placeholder="e.g. Rahul Sharma"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-yellow">
+          </div>
+          <div>
+            <label for="posterPhone" class="block text-xs font-semibold text-slate-300 mb-1">
+              WhatsApp Phone <span class="text-rose-400">*</span>
+            </label>
+            <input type="tel" id="posterPhone" required placeholder="e.g. +91 9876543210"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-yellow">
+          </div>
+        </div>
+
+        <!-- Pickup & Destination -->
+        <div>
+          <label for="pickupLocation" class="block text-xs font-semibold text-slate-300 mb-1">
+            <i class="fa-solid fa-circle-dot text-emerald-400 mr-1"></i> Pickup Location <span class="text-rose-400">*</span>
+          </label>
+          <input type="text" id="pickupLocation" required placeholder="e.g. MG Road Metro Station Gate 2"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-yellow">
+        </div>
+
+        <div>
+          <label for="dropLocation" class="block text-xs font-semibold text-slate-300 mb-1">
+            <i class="fa-solid fa-location-dot text-rose-400 mr-1"></i> Destination / Drop Point <span class="text-rose-400">*</span>
+          </label>
+          <input type="text" id="dropLocation" required placeholder="e.g. Koramangala Sony World Signal"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-yellow">
+        </div>
+
+        <!-- Vehicle Type, Time & Seats -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="vehicleType" class="block text-xs font-semibold text-slate-300 mb-1">
+              Vehicle Type
+            </label>
+            <select id="vehicleType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-brand-yellow">
+              <option value="Bike">Rapido Bike (1 seat)</option>
+              <option value="Auto" selected>Rapido Auto (2 seats)</option>
+              <option value="Cab">Rapido Cab (3 seats)</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="rideTime" class="block text-xs font-semibold text-slate-300 mb-1">
+              Departure Time <span class="text-rose-400">*</span>
+            </label>
+            <input type="time" id="rideTime" required
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-brand-yellow">
+          </div>
+
+          <div>
+            <label for="seatsAvailable" class="block text-xs font-semibold text-slate-300 mb-1">
+              Seats Available
+            </label>
+            <input type="number" id="seatsAvailable" value="1" min="1" max="4" required
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-brand-yellow">
+          </div>
+        </div>
+
+        <!-- Fare Breakdown -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-850 p-3 rounded-xl border border-slate-800">
+          <div>
+            <label for="totalFare" class="block text-xs font-semibold text-slate-300 mb-1">
+              Estimated Rapido Fare (₹) <span class="text-rose-400">*</span>
+            </label>
+            <input type="number" id="totalFare" required placeholder="e.g. 150" min="20"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-yellow">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Estimated Co-rider Share</label>
+            <div id="formSplitPreview" class="text-base font-bold text-emerald-400 py-2">
+              ₹75 per seat
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Notes -->
+        <div>
+          <label for="rideNotes" class="block text-xs font-semibold text-slate-300 mb-1">
+            Notes / Landmark Info (Optional)
+          </label>
+          <input type="text" id="rideNotes" placeholder="e.g. Booking already confirmed, waiting by the tea stall"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-yellow">
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="pt-2 flex items-center justify-end gap-3">
+          <button type="button" id="cancelPostBtn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-brand-yellow hover:bg-brand-darkYellow text-slate-950 text-xs font-bold rounded-lg shadow-lg shadow-brand-yellow/20 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-paper-plane"></i> Publish Ride
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Join Ride / WhatsApp Connect Details -->
+  <div id="joinModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+      <button id="closeJoinModalBtn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="text-center mb-4">
+        <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-brand-whatsapp flex items-center justify-center text-2xl mx-auto mb-2 border border-brand-whatsapp/30">
+          <i class="fa-brands fa-whatsapp"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Join Ride & Connect</h3>
+        <p class="text-xs text-slate-400">Directly connect with the ride poster on WhatsApp</p>
+      </div>
+
+      <div id="joinModalRideDetails" class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 space-y-2 text-xs">
+        <!-- Injected details -->
+      </div>
+
+      <div class="mt-4 space-y-2">
+        <a id="joinWhatsAppActionBtn" href="#" target="_blank"
+          class="w-full py-3 px-4 bg-brand-whatsapp hover:bg-emerald-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/30">
+          <i class="fa-brands fa-whatsapp text-lg"></i> Open WhatsApp Chat
+        </a>
+        <button id="copyWhatsAppMessageBtn" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition">
+          <i class="fa-regular fa-copy"></i> Copy Ride Details & Pre-written Message
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-800 bg-slate-950/80 py-6 px-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-motorcycle text-brand-yellow"></i>
+        <span class="text-slate-400 font-semibold">RideSplit MVP</span> — Peer-to-peer ride pooling for Rapido riders.
+      </div>
+      <div>
+        Built with HTML5, Tailwind CSS, Leaflet Maps & Local/JSON Storage.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/rides-data.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
